@@ -1,8 +1,16 @@
-const signup = (req, res, next) => {
-  // TODO: sanitation
-  // TODO: hash password
-  // TODO: write user in DB
-  // TODO: send account verification email
+import { ServerError } from '../error.mjs';
+import { errorPritify, UserSignupModel } from './validator.mjs';
+
+const signup = async (req, res, next) => {
+  const result = await UserSignupModel.safeParseAsync(req.body);
+  if (!result.success) {
+    throw new ServerError(400, errorPritify(result));
+  }
+
+  // TODO: hash password -> bcrypt
+  // TODO: write user in DB -> Prisma
+  // TODO: send account verification email -> nodemailer
+
   res.json({ msg: 'signup is successful' });
 };
 
@@ -10,7 +18,7 @@ const login = (req, res, next) => {
   // TODO: find user by email from DB
   // TODO: check is account verified
   // TODO: match hased password
-  // TODO: Generate JWT Token
+  // TODO: Generate JWT Token -> json web token
   res.json({ msg: 'login done' });
 };
 
