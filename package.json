@@ -5,13 +5,23 @@
   "main": "index.mjs",
   "scripts": {
     "start": "node index.mjs",
-    "dev": "nodemon"
+    "dev": "nodemon",
+     "db:generate": "prisma generate",
+    "db:push": "prisma db push",
+    "db:migrate": "prisma migrate dev",
+    "db:seed": "node prisma/seed.js",
+    "db:studio": "prisma studio"
   },
+  
   "dependencies": {
+    "@prisma/client": "^6.15.0",
+    "bcrypt": "^6.0.0",
     "dotenv": "^17.2.1",
     "express": "^5.1.0",
     "jsonwebtoken": "^9.0.2",
-    "nodemailer": "^7.0.5"
+    "nodemailer": "^7.0.5",
+    "prisma": "^6.15.0",
+    "zod": "^4.1.5"
   },
   "devDependencies": {
     "nodemon": "^3.1.10"
