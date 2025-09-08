@@ -2,6 +2,7 @@ import { ServerError } from '../error.mjs';
 import bcrypt from 'bcrypt';
 import prisma from '../prisma/db.mjs';
 import { errorPritify, UserSignupModel } from './validator.mjs';
+import emailQueue from '../queue/email.queue.mjs';
 
 const signup = async (req, res, next) => {
   const result = await UserSignupModel.safeParseAsync(req.body);
@@ -20,7 +21,16 @@ const signup = async (req, res, next) => {
   });
   console.log(newUser);
 
-  // TODO: send account verification email -> nodemailer
+  // TODO: create verification link
+
+  await emailQueue.add('welcome_email', {
+    to: newUser.email,
+    subject: 'Verfication Email',
+    body: `<html>
+      <h1>Welcome ${newUser.name}</h1>
+      <a href="http://google.com">Click Here to verify account</a>
+    </html>`,
+  });
 
   res.json({ msg: 'signup is successful' });
 };
