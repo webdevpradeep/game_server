@@ -15,4 +15,6 @@ model User {
   name            String?
   password        String
   accountVerified Boolean @default(false)
+  resetToken       String?
+  resetTokenExpiry DateTime     @default(now())
 }

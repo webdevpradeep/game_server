@@ -54,8 +54,16 @@ const UserSignupModel = z.object({
     }),
 });
 
+const UserForgotPassword = z.object({
+  email: z
+    .string()
+    .email({ message: 'Please provide a valid email address.' })
+    .min(6, { message: 'Email must be at least 6 characters long.' })
+    .max(50, { message: 'Email must not exceed 50 characters.' }),
+});
+
 const errorPritify = (result) => {
   return z.prettifyError(result.error);
 };
 
-export { UserLoginModel, UserSignupModel, errorPritify };
+export { UserLoginModel, UserSignupModel, UserForgotPassword, errorPritify };

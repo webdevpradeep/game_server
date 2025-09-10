@@ -4,7 +4,9 @@ import prisma from '../prisma/db.mjs';
 import { errorPritify, UserSignupModel, UserLoginModel } from './validator.mjs';
 import emailQueue from '../queue/email.queue.mjs';
 import { asyncJwtSign } from '../async.jwt.mjs';
-
+import { sendEmail } from '../email.mjs';
+import Randomstring from 'randomstring';
+import dayjs from 'dayjs';
 const signup = async (req, res, next) => {
   const result = await UserSignupModel.safeParseAsync(req.body);
   if (!result.success) {
@@ -20,14 +22,6 @@ const signup = async (req, res, next) => {
       password: hasedPassword,
     },
   });
-
-  // 1. Add 2 columns in User table in DB.
-  // 1.1 Add resetToken(string), resetTokenExpiry(timestampz) in User prisma model
-  // 1.2 Run migration to acctually add column
-  // 2. generate a 32 keyword random string
-  // 3. update this string in DB with future 15min expiry time
-  // 4. make link example https://localhost:5000/resetPassword/fgvjkdsuhvgyahfvajdsfahvdsjvbd
-  // 5. add this above link email replacing http://google.com
 
   await emailQueue.add('welcome_email', {
     to: newUser.email,
@@ -67,12 +61,26 @@ const login = async (req, res, next) => {
   res.json({ msg: 'login successful', token });
 };
 
-const forgotPassword = (req, res, next) => {
-  // 1. find User via email from req.body
-  // 1. generate a 32 keyword random string
-  // 3. update this string in DB with future 15min expiry time
-  // 4. make link example https://localhost:5000/resetPassword/fgvjkdsuhvgyahfvajdsfahvdsjvbd
-  // 5. send this link via email
+const forgotPassword = async (req, res, next) => {
+  const user = await prisma.user.findUnique({
+    where: {
+      email: req.body.email,
+    },
+  });
+  if (!user) {
+    throw new ServerError(404, 'user DNE');
+  }
+  const token = Randomstring.generate();
+  await prisma.user.update({
+    where: { email: req.body.email },
+    data: {
+      resetToken: token,
+      resetTokenExpiry: new Date(Date.now()),
+    },
+  });
+  const msg = `<html><body>Click this link <a href="http://localhost:3000/reset_password/${token}">Click Here</a></body></html>`;
+  await sendEmail(req.body.email, 'Forgot Password', msg);
+  res.json({ message: 'email sent check your email' });
   res.json({ msg: 'forgot password' });
 };
 
@@ -87,4 +95,11 @@ const resetPassword = (req, res, next) => {
   res.json({ msg: 'reset password successul' });
 };
 
-export { signup, login, forgotPassword, resetPassword };
+const getMe = async (req, res, next) => {
+  // 1. Extract user from request
+  // 2. find user in DB by ID or Email
+  // 3. Send user details without password
+  res.json({ msg: 'This is me' });
+};
+
+export { signup, login, forgotPassword, resetPassword, getMe };
