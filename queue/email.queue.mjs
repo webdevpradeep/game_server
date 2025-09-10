@@ -10,3 +10,5 @@ const emailQueue = new Queue('email_queue', {
   //   },
   // }
 });
+
+export default emailQueue;
