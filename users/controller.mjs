@@ -84,15 +84,38 @@ const forgotPassword = async (req, res, next) => {
   res.json({ msg: 'forgot password' });
 };
 
-const resetPassword = (req, res, next) => {
-  // 1. Extract token from req.body
-  // 2. find User via token from DB
-  // 3. check for token expiry
-  // 4. check if is accountVerified
-  // 5. if account verified extract password from req.body
-  // 6. hash password
-  // 7. update user password in DB
-  res.json({ msg: 'reset password successul' });
+const resetPassword = async (req, res, next) => {
+  const users = await prisma.user.findMany({
+    where: {
+      resetToken: req.params.token,
+    },
+  });
+
+  if (!users.length) {
+    throw new ServerError(400, 'invalid reset link');
+  }
+
+  const user = users[0];
+
+  const subTime = dayjs().subtract(
+    process.env.RESET_LINK_EXPIRY_TIME_IN_MINUTES,
+    'minute'
+  );
+  if (dayjs(subTime).isAfter(dayjs(user.resetTokenExpiry))) {
+    throw new ServerError(400, 'link is expired!!! try forgot password again');
+  }
+
+  const hasedPassword = await bcrypt.hash(req.body.password, 10);
+  await prisma.user.update({
+    where: {
+      id: user.id,
+    },
+    data: {
+      resetToken: null,
+      password: hasedPassword,
+    },
+  });
+  res.json({ message: 'password reset successful' });
 };
 
 const getMe = async (req, res, next) => {
