@@ -1,11 +1,11 @@
 import nodemailer from 'nodemailer';
 
 var transport = nodemailer.createTransport({
-  host: process.env.EAMIL_HOST,
-  port: process.env.EAMIL_PORT,
+  host: process.env.EMAIL_HOST,
+  port: process.env.EMAIL_PORT,
   auth: {
-    user: process.env.EAMIL_USERNAME,
-    pass: process.env.EAMIL_PASSWORD,
+    user: process.env.EMAIL_USERNAME,
+    pass: process.env.EMAIL_PASSWORD,
   },
 });
 
