@@ -1,4 +1,4 @@
-import prisma from '../prisma/db.mjs';
+import { prisma, Prisma } from '../prisma/db.mjs';
 
 const addGame = async (req, res, next) => {
   // TODO: add validation
