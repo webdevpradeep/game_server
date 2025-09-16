@@ -195,4 +195,16 @@ const getMe = async (req, res, next) => {
   res.json({ msg: 'This is me', me: req.user });
 };
 
-export { signup, login, forgotPassword, resetPassword, getMe };
+const updateProfileImage = async (req, res, next) => {
+  console.log(req.file);
+  res.json({ msg: 'oiuyjthgr' });
+};
+
+export {
+  signup,
+  login,
+  forgotPassword,
+  resetPassword,
+  getMe,
+  updateProfileImage,
+};
