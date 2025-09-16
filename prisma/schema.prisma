@@ -15,6 +15,7 @@ model User {
   password          String
   accountVerified   Boolean             @default(false)
   resetToken        String?
+  tokenExpiry       DateTime? 
   resetTokenExpiry  DateTime            @default(now())
   createdAt         DateTime            @default(now())
   profilePhoto      String?
