@@ -8,7 +8,7 @@ import gameRouter from './game/router.mjs';
 import sessionRouter from './session/router.mjs';
 const app = express();
 
-app.use(express.json());
+app.use(express.json()); // without this middlware req.body will be undefined
 
 app.use('/users', userRouter);
 app.use('/games', gameRouter);
