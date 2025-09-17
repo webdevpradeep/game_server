@@ -197,6 +197,7 @@ const getMe = async (req, res, next) => {
 
 const updateProfileImage = async (req, res, next) => {
   console.log(req.file);
+  // upload to cloud storage
   res.json({ msg: 'oiuyjthgr' });
 };
 
