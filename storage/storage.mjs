@@ -1,34 +1,32 @@
+import { ServerError } from '../error.mjs';
 import cloudinary from './cloudinary.mjs';
-import { Readable } from 'node:stream';
 
-function bufferToStream(buffer) {
-  const readable = new Readable();
-  readable.push(buffer);
-  readable.push(null); // end of stream
-  return readable;
-}
-
-const uploadImage = async (file, folderName, isPublic) => {
-  const result = await new Promise((resolve, reject) => {
-    try {
+const uploadImage = async (buffer, fileName, folderName, isPublic) => {
+  try {
+    const result = await new Promise((resolve, reject) => {
       const uploadStream = cloudinary.uploader.upload_stream(
         {
-          folder: folderName,
           access_mode: isPublic ? 'public' : 'authenticated',
+          folder: folderName,
+          public_id: fileName, // include extension here, e.g., "myfile.png"
+          overwrite: true,
+          use_filename: true, // make sure filename is used as-is
+          unique_filename: false, // avoid Cloudinary adding random strings
         },
-        (error, result) => {
-          if (error) return reject(error);
-          console.log('------------------------------');
-          console.log(result);
-          console.log('------------------------------');
-          resolve(result);
+        (error, uploadResult) => {
+          if (error) {
+            return reject(error);
+          }
+          return resolve(uploadResult);
         }
       );
-
-      bufferToStream(file.buffer).pipe(uploadStream);
-    } catch (err) {}
-  });
-  return result;
+      uploadStream.end(buffer);
+    });
+    console.log(result);
+    return result;
+  } catch (err) {
+    throw new ServerError(400, err.message);
+  }
 };
 
 export { uploadImage };
