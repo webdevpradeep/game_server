@@ -204,13 +204,27 @@ const getMe = async (req, res, next) => {
 };
 
 const updateProfileImage = async (req, res, next) => {
-  // TODO: check if already image uploaded
-  // find user from DB
-  // Delete image from cloudnary
+  const user = await prisma.user.findUnique({
+    where: {
+      id: req.user.id,
+    },
+  });
+  let result;
+  if (!user.profilePhoto) {
+    // Delete image from cloudnary
+    const fileName = `${generateSecureRandomString(32)}`;
+    // upload to cloud storage
+    result = await uploadImage(req.file.buffer, fileName, 'profiles', true);
+    // update file url in DB
+  } else {
+    // split by "/"
+    const splittedUrl = user.profilePhoto.split('/');
+    // pick last part of URL which is file name with extenstion
+    const fileNameWithExt = splittedUrl[splittedUrl.length - 1];
+    const fileName = fileNameWithExt.split('.')[0];
+    result = await uploadImage(req.file.buffer, fileName, 'profiles', true);
+  }
 
-  // upload to cloud storage
-  const result = await uploadImage(req.file, 'profiles', true);
-  console.log(result);
   await prisma.user.update({
     where: { id: req.user.id },
     data: {
