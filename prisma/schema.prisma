@@ -53,6 +53,10 @@ model GameSession {
   status            Status              @default(WAITING)
   winner            String?
   game              Game                @relation(fields: [gameID], references: [id])
+  GameUrl           String?
+  ProcessID         Int?
+  CreatedAt         DateTime            @default(now())
+  StartedAt         DateTime?
   GameSessionPlayer GameSessionPlayer[]
 }
 
@@ -62,6 +66,9 @@ model GameSessionPlayer {
   playerID    Int
   player      User        @relation(fields: [playerID], references: [id])
   gameSession GameSession @relation(fields: [sessionID], references: [id])
+
+  
+  @@unique([sessionID, playerID])
 }
 
 enum Role {
