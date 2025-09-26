@@ -1,6 +1,14 @@
 import express from 'express';
 import { createServer } from 'node:http';
+import path from 'node:path';
 import { Server } from 'socket.io';
+import { fileURLToPath } from 'url';
+
+const PORT = 3001;
+
+// Define __dirname for use with ES Modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 let turn = '';
 
@@ -93,11 +101,19 @@ io.on('connection', (socket) => {
   });
 });
 
-httpServer.listen(5000, (e) => {
+app.get('/apple', (req, res, next) => {
+  res.json({ msg: 'hello apple' });
+});
+app.use(express.static(path.join(__dirname, 'public')));
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
+httpServer.listen(PORT, (e) => {
   if (e) {
     return console.log(e);
   }
-  console.log('server started on 5000');
+  console.log(`server started on ${PORT}`);
 });
 
 const filterClient = (socketId) => {
