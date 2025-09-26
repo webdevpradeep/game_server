@@ -40,7 +40,7 @@ const assignColor = (clients) => {
   });
 };
 
-const socket = io('ws://10.172.66.139:5000');
+const socket = io();
 
 socket.on('info', (msg) => {
   console.log(msg);
