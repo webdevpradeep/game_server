@@ -84,7 +84,8 @@ const requestGame = async (req, res, next) => {
   const gameInstance = spawn(
     'node',
     [
-      'D:/class/Backend/Game Server/game_server/allGames/snake/server/index.mjs',
+      // 'D:/class/Backend/Game Server/game_server/allGames/snake/server/index.mjs',
+      'C:/Users/Deepak/Desktop/Pradeep/game_server/allGames/snake/server/index.mjs',
     ],
     {
       detached: true,
