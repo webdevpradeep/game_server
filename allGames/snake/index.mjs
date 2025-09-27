@@ -1,10 +1,12 @@
 import express from 'express';
 import { createServer } from 'node:http';
-import path from 'node:path';
 import { Server } from 'socket.io';
-import { fileURLToPath } from 'url';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-const PORT = 3001;
+// console.log(process.argv)
+
+const PORT = process.argv[2] || 80;
 
 // Define __dirname for use with ES Modules
 const __filename = fileURLToPath(import.meta.url);
@@ -101,9 +103,6 @@ io.on('connection', (socket) => {
   });
 });
 
-app.get('/apple', (req, res, next) => {
-  res.json({ msg: 'hello apple' });
-});
 app.use(express.static(path.join(__dirname, 'public')));
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
