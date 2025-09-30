@@ -128,4 +128,48 @@ const startGame = async (game) => {
   return { pid: gameInstance.pid, port };
 };
 
-export { addGame, listGame, requestGame };
+const getMyGameSession = async (req, res, next) => {
+  const gameSessionID = req.params.sessionID * 1;
+  if (!gameSessionID) {
+    throw new ServerError(400, 'must supply game session ID');
+  }
+
+  const sessionPlayers = await prisma.gameSessionPlayer.findMany({
+    where: {
+      sessionID: gameSessionID,
+    },
+    select: {
+      id: true,
+      sessionID: true,
+      playerID: true,
+      player: {
+        select: {
+          name: true,
+          profilePhoto: true,
+        },
+      },
+    },
+  });
+
+  let isMySession = false;
+
+  sessionPlayers.forEach((sp) => {
+    if (sp.playerID == req.user.id) {
+      isMySession = true;
+    }
+  });
+
+  if (!isMySession) {
+    throw new ServerError(401, 'this is not your game session');
+  }
+
+  const gameSession = await prisma.gameSession.findUnique({
+    where: {
+      id: gameSessionID,
+    },
+  });
+
+  res.json({ msg: 'success', gameSession, sessionPlayers });
+};
+
+export { addGame, listGame, requestGame, getMyGameSession };
