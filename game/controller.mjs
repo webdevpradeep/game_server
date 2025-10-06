@@ -88,7 +88,7 @@ const requestGame = async (req, res, next) => {
   const { pid, port } = await startGame(game);
   const gameURL = `${req.protocol}://${req.get('host')}:${port}`;
 
-  await prisma.gameSession.updateMany({
+  gameSession = await prisma.gameSession.updateManyAndReturn({
     where: {
       id: gameSession.id,
     },
@@ -98,16 +98,13 @@ const requestGame = async (req, res, next) => {
       status: 'PLAYING',
       StartedAt: new Date(),
     },
-  });
+  })[0];
 
   res.json({
     msg: 'successful',
     gameID: req.body.gameID,
     gameSession,
     gameSessionPlayer,
-    data,
-    pid,
-    url: gameURL,
   });
 };
 
