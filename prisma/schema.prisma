@@ -8,20 +8,25 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum Roles {
+  ADMIN
+  USER
+}
+
+// Define your models here
 model User {
   id                Int                 @id @default(autoincrement())
   email             String              @unique
   name              String?
+  Role              Roles               @default(USER)
   password          String
   accountVerified   Boolean             @default(false)
   resetToken        String?
-  tokenExpiry       DateTime? 
-  resetTokenExpiry  DateTime            @default(now())
-  createdAt         DateTime            @default(now())
+  tokenExpiry       DateTime?
   profilePhoto      String?
-  role              String              @default("user")
-  GameSessionPlayer GameSessionPlayer[]
+  createdAt         DateTime            @default(now())
   PlayerGameProfile PlayerGameProfile[]
+  GameSessionPlayer GameSessionPlayer[]
 }
 
 model Game {
@@ -30,29 +35,36 @@ model Game {
   maxPlayer         Int
   minPlayer         Int
   thumbnail         String?
-  GameSession       GameSession[]
   PlayerGameProfile PlayerGameProfile[]
+  GameSession       GameSession[]
 }
 
 model PlayerGameProfile {
   id              Int  @id @default(autoincrement())
   gameID          Int
+  game            Game @relation(fields: [gameID], references: [id])
   playerID        Int
+  player          User @relation(fields: [playerID], references: [id])
   highScore       Int  @default(0)
   totalPlayedTime Int  @default(0)
   gameCount       Int  @default(0)
-  game            Game @relation(fields: [gameID], references: [id])
-  player          User @relation(fields: [playerID], references: [id])
 
   @@unique([gameID, playerID])
+}
+
+enum Status {
+  WAITING
+  PLAYING
+  LEFT
+  FINISHED
 }
 
 model GameSession {
   id                Int                 @id @default(autoincrement())
   gameID            Int
+  game              Game                @relation(fields: [gameID], references: [id])
   status            Status              @default(WAITING)
   winner            String?
-  game              Game                @relation(fields: [gameID], references: [id])
   GameUrl           String?
   ProcessID         Int?
   CreatedAt         DateTime            @default(now())
@@ -63,22 +75,9 @@ model GameSession {
 model GameSessionPlayer {
   id          Int         @id @default(autoincrement())
   sessionID   Int
+  gameSession GameSession @relation(fields: [sessionID], references: [id])
   playerID    Int
   player      User        @relation(fields: [playerID], references: [id])
-  gameSession GameSession @relation(fields: [sessionID], references: [id])
 
-  
   @@unique([sessionID, playerID])
-}
-
-enum Role {
-  ADMIN
-  USER
-}
-
-enum Status {
-  WAITING
-  PLAYING
-  LEFT
-  FINISHED
 }
