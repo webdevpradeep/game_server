@@ -1,10 +1,12 @@
+import dotenv from 'dotenv';
+dotenv.config();
+
 import express from 'express';
 import { createServer } from 'node:http';
 import { Server } from 'socket.io';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-
-// console.log(process.argv)
+import jwt from 'jsonwebtoken';
 
 const PORT = process.argv[2] || 80;
 
@@ -71,18 +73,36 @@ const io = new Server(httpServer, {
   },
 });
 
+const asyncJwtVerify = (token, secret) => {
+  return new Promise((resolve, reject) => {
+    jwt.verify(token, secret, (err, token) => {
+      if (err) {
+        return reject(err);
+      }
+      resolve(token);
+    });
+  });
+};
+
 io.on('connection', (socket) => {
   console.log('a user connected');
-  socket.on('info', (name) => {
-    console.log(name);
-    if (!name) {
+  socket.on('info', async (token) => {
+    console.log(token, process.env.TOKEN_SECRET);
+    if (!token) {
       return;
     }
     if (turn === '') {
       turn = socket.id;
     }
-    socket.emit('info', 'hello from server');
-    clients.push({ name, socketId: socket.id, position: 1 });
+    let payload;
+    try {
+      payload = await asyncJwtVerify(token, process.env.TOKEN_SECRET);
+      console.log(payload);
+      socket.emit('info', payload);
+    } catch (e) {
+      socket.emit('info', e.message);
+    }
+    clients.push({ name: payload.name, socketId: socket.id, position: 1 });
     io.emit('game', { clients, turn });
     console.log(clients);
   });
