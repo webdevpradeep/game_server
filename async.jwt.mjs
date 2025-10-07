@@ -12,11 +12,11 @@ const asyncJwtSign = (payload, secret, options) => {
 
 const asyncJwtVerify = (token, secret) => {
   return new Promise((resolve, reject) => {
-    jwt.verify(token, secret, (err, token) => {
+    jwt.verify(token, secret, (err, payload) => {
       if (err) {
         return reject(err);
       }
-      resolve(token);
+      resolve(payload);
     });
   });
 };
