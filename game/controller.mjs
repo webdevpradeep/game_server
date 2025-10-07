@@ -86,6 +86,7 @@ const requestGame = async (req, res, next) => {
   }
 
   const { pid, port } = await startGame(game);
+  // TODO: homework put token in game url as query
   const gameURL = `${req.protocol}://${req.get('host')}:${port}`;
 
   gameSession = await prisma.gameSession.updateManyAndReturn({
