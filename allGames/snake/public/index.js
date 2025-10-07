@@ -8,7 +8,6 @@ const playBtnEle = document.getElementById('play');
 playBtnEle.style.backgroundColor = '#fcc';
 playBtnEle.style.color = '#000';
 
-const userName = prompt('enter your name');
 const pawnValue =
   prompt('enter number 0: blue, 1:yellow, 2:red, 3: green') || 0;
 
@@ -44,7 +43,7 @@ const socket = io();
 
 socket.on('info', (msg) => {
   console.log(msg);
-  console.log(`Name: ${userName}, ID: ${socket.id} `);
+  console.log(`Name: ${msg.name}, ID: ${socket.id} `);
 });
 socket.on('game', async ({ diceValue, clients, turn }) => {
   playBtnEle.disabled = false;
@@ -76,8 +75,9 @@ socket.on('game_over', (winnerList) => {
     turnEle.innerHTML += ` ${i + 1}. ${e.name} `;
   });
 });
-
-socket.emit('info', userName);
+const params = new URLSearchParams(window.location.search);
+const token = params.get('token');
+socket.emit('info', token);
 
 const path = {
   1: { x: 0, y: 9 },
