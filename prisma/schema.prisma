@@ -66,6 +66,7 @@ model GameSession {
   status            Status              @default(WAITING)
   winner            String?
   GameUrl           String?
+  tokenSecret       String?
   ProcessID         Int?
   CreatedAt         DateTime            @default(now())
   StartedAt         DateTime?
