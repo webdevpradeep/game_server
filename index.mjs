@@ -9,7 +9,15 @@ import gameRouter from './game/router.mjs';
 import sessionRouter from './session/router.mjs';
 const app = express();
 
-app.use(cors());
+const PORT = process.env.PORT || 5000;
+
+app.use(
+  cors({
+    origin: 'http://localhost:5173',
+    methods: ['GET', 'POST', 'PUT', 'DELETE'],
+    credentials: true,
+  })
+);
 
 app.use(express.json()); // without this middlware req.body will be undefined
 
