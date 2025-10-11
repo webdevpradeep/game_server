@@ -8,11 +8,12 @@ import {
 } from './controller.mjs';
 import { authentication, authorization } from '../auth.mjs';
 
+gameRouter.get('/', listGame);
+
 gameRouter.use(authentication);
 
 gameRouter
   .post('/', authorization('ADMIN'), addGame)
-  .get('/', listGame)
   .post('/request', requestGame)
   .get('/session/:sessionID', getMyGameSession);
 
