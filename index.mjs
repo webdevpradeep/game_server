@@ -2,11 +2,14 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 import express from 'express';
+import cors from 'cors';
 import { errorHandler } from './error.mjs';
 import userRouter from './users/router.mjs';
 import gameRouter from './game/router.mjs';
 import sessionRouter from './session/router.mjs';
 const app = express();
+
+app.use(cors());
 
 app.use(express.json()); // without this middlware req.body will be undefined
 
