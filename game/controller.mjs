@@ -3,6 +3,8 @@ import { ServerError } from '../error.mjs';
 import { spawn } from 'node:child_process';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { generateSecureRandomString } from '../utils.mjs';
+import { asyncJwtSign } from '../async.jwt.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -85,9 +87,13 @@ const requestGame = async (req, res, next) => {
     });
   }
 
-  const { pid, port } = await startGame(game);
+  // generate secure token
+  const tokenSecret = generateSecureRandomString(32);
+  // token sent to newly started game server
+  const { pid, port } = await startGame(game, tokenSecret);
+  const token = asyncJwtSign(req.user, tokenSecret);
   // TODO: homework put token in game url as query
-  const gameURL = `${req.protocol}://${req.get('host')}:${port}`;
+  const gameURL = `${req.protocol}://${req.get('host')}:${port}?token=${token}`;
 
   gameSession = await prisma.gameSession.updateManyAndReturn({
     where: {
@@ -98,6 +104,7 @@ const requestGame = async (req, res, next) => {
       ProcessID: pid,
       status: 'PLAYING',
       StartedAt: new Date(),
+      tokenSecret,
     },
   })[0];
 
@@ -109,20 +116,33 @@ const requestGame = async (req, res, next) => {
   });
 };
 
-const startGame = async (game) => {
+const startGame = async (game, token) => {
   const port = Math.ceil(Math.random() * 62000) + 3000; // random number from 3000-65000
 
   // start game
   const gameInstance = spawn(
     'node',
-    [path.resolve(__dirname, `../allGames/${game.name}/index.mjs`), port],
+    [
+      path.resolve(__dirname, `../allGames/${game.name}/index.mjs`),
+      port,
+      token,
+    ],
     {
       detached: true,
-      stdio: 'ignore',
+      stdio: ['ignore', 'pipe', 'pipe'],
     }
   );
-  gameInstance.unref();
-  console.log(gameInstance);
+  gameInstance.stdout.on('data', (data) => {
+    console.log(`[${game.name}], stdout: ${data}`);
+  });
+  gameInstance.stderr.on('data', (data) => {
+    console.error(`[${game.name}], stderr: ${data}`);
+  });
+  gameInstance.on('close', (code) => {
+    console.log(`[${game.name}] exited with code ${code}`);
+  });
+  // gameInstance.unref();
+  // console.log(gameInstance)
   return { pid: gameInstance.pid, port };
 };
 
