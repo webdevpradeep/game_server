@@ -11,6 +11,10 @@ import { asyncJwtVerify } from './async.jwt.mjs';
 const PORT = process.argv[2] || 80;
 const TOKEN_SECRET = process.argv[3];
 
+if (!TOKEN_SECRET) {
+  throw new Error('Missing required environment variable: TOKEN_SECRET');
+}
+
 // Define __dirname for use with ES Modules
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -87,19 +91,28 @@ io.on('connection', (socket) => {
     }
     let payload;
     try {
-      payload = asyncJwtVerify(token, TOKEN_SECRET);
+      payload = await asyncJwtVerify(token, TOKEN_SECRET);
       console.log(payload);
       socket.emit('info', payload);
     } catch (e) {
       socket.emit('info', e.message);
     }
-    clients.push({
-      name: payload.name,
-      id: payload.id,
-      profilePhoto: payload.profilePhoto,
-      socketId: socket.id,
-      position: 1,
+    let isFound = false;
+    clients.forEach((e, i) => {
+      if (e.id === payload.id) {
+        clients[i].socketId = socket.id;
+        isFound = true;
+      }
     });
+    if (!isFound) {
+      clients.push({
+        name: payload.name,
+        id: payload.id,
+        profilePhoto: payload.profilePhoto,
+        socketId: socket.id,
+        position: 1,
+      });
+    }
     io.emit('game', { clients, turn });
     console.log(clients);
   });
@@ -120,10 +133,11 @@ io.on('connection', (socket) => {
   });
 });
 
-app.use(express.static(path.join(__dirname, 'public')));
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
+
+app.use(express.static(path.join(__dirname, 'public')));
 
 httpServer.listen(PORT, (e) => {
   if (e) {
