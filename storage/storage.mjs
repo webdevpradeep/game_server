@@ -29,4 +29,11 @@ const uploadImage = async (buffer, fileName, folderName, isPublic) => {
   }
 };
 
-export { uploadImage };
+const deleteImage = (publicId) => {
+  const result = cloudinary.uploader.destroy(publicId, {
+    resource_type: 'image',
+  });
+  return result;
+};
+
+export { uploadImage, deleteImage };
