@@ -19,7 +19,7 @@ model User {
   email             String              @unique
   name              String?
   Role              Roles               @default(USER)
-  password          String
+  password          String?
   accountVerified   Boolean             @default(false)
   resetToken        String?
   tokenExpiry       DateTime?
