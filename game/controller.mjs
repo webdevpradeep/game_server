@@ -1,9 +1,10 @@
-import { DB_ERR_CODES, prisma, Prisma } from '../prisma/db.mjs';
+import { fileURLToPath } from 'node:url';
 import { ServerError } from '../error.mjs';
+import { DB_ERR_CODES, prisma } from '../prisma/db.mjs';
 import { spawn } from 'node:child_process';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
 import { generateSecureRandomString } from '../utils.mjs';
+
 import { asyncJwtSign } from '../async.jwt.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -22,6 +23,7 @@ const addGame = async (req, res, next) => {
 
   res.json({ msg: 'successful', game });
 };
+
 const listGame = async (req, res, next) => {
   const games = await prisma.game.findMany();
   res.json({ msg: 'successful', games });
@@ -31,7 +33,9 @@ const requestGame = async (req, res, next) => {
   if (!req.body.gameID) {
     throw new ServerError(400, 'game id must be supplied');
   }
+
   const tokenSecret = generateSecureRandomString(32);
+
   let gameSession = await prisma.gameSession.findFirst({
     where: {
       gameID: req.body.gameID,
@@ -89,7 +93,7 @@ const requestGame = async (req, res, next) => {
     });
   }
 
-  // token sent to newly started game server
+  console.log('game start');
   const { pid, port } = await startGame(game, tokenSecret);
 
   const token = await asyncJwtSign(req.user, tokenSecret);
@@ -105,7 +109,7 @@ const requestGame = async (req, res, next) => {
       status: 'PLAYING',
       StartedAt: new Date(),
     },
-  });
+  })[0];
 
   res.json({
     msg: 'successful',
@@ -142,8 +146,8 @@ const startGame = async (game, token) => {
     console.log(`[${game.name}] exited with code ${code}`);
   });
   // gameInstance.unref();
-  // console.log(gameInstance)
-  return { pid: gameInstance.pid, port };
+  // console.log(gameInstance);
+  return { pid: gameInstance.pid };
 };
 
 const getMyGameSession = async (req, res, next) => {
