@@ -1,29 +1,33 @@
 import multer from 'multer';
 import { ServerError } from '../error.mjs';
 
+const uploadConfig = {
+  maxFileSize: 5 * 1024 * 1024,
+  allowedMimeTypes: ['image/jpeg', 'image/png'],
+  allowedExtensions: ['.jpg', '.jpeg', '.png'],
+  destination: './uploads/',
+};
+
 // Memory storage (keeps files in RAM as Buffer)
 const storage = multer.memoryStorage();
 
 // File filter for images only
-const fileFilter = (req, file, callback) => {
+const fileFilter = (req, file, cb) => {
   if (file.mimetype.startsWith('image/')) {
-    callback(null, true);
+    cb(null, true);
   } else {
-    callback(new Error('Only image files are allowed'), false);
+    cb(new Error('Only image files are allowed'), false);
   }
 };
 
-const uploadConfig = {
-  storage,
-  dest: './uploads/',
+const upload = multer({
+  storage: storage,
   limits: {
-    fileSize: 0.5 * 1024 * 1024,
+    fileSize: uploadConfig.maxFileSize,
     files: 1,
   },
-  fileFilter,
-};
-
-const upload = multer(uploadConfig);
+  fileFilter: fileFilter,
+});
 
 const singleImageUploadMiddleware = (fieldName = 'image') => {
   return async (req, res, next) => {
@@ -39,8 +43,8 @@ const singleImageUploadMiddleware = (fieldName = 'image') => {
                 new ServerError(
                   400,
                   `File size must be less than ${
-                    uploadConfig.limits.fileSize / 1024
-                  }KB`
+                    uploadConfig.maxFileSize / (1024 * 1024)
+                  }MB`
                 )
               );
 
@@ -66,14 +70,14 @@ const singleImageUploadMiddleware = (fieldName = 'image') => {
         return next(new ServerError(400, 'Please select a file to upload'));
       }
 
-      // // Add file info to request object for further processing
-      // req.uploadedFile = {
-      //   filename: req.file.filename,
-      //   originalName: req.file.originalname,
-      //   mimetype: req.file.mimetype,
-      //   size: req.file.size,
-      //   path: req.file.path
-      // };
+      // Add file info to request object for further processing
+      req.uploadedFile = {
+        filename: req.file.filename,
+        originalName: req.file.originalname,
+        mimetype: req.file.mimetype,
+        size: req.file.size,
+        path: req.file.path,
+      };
 
       next();
     });
