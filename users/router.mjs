@@ -1,6 +1,6 @@
 import express from 'express';
 import { authentication } from '../auth.mjs';
-import { singleImageUploadMiddleware } from '../storege/config.mjs';
+import { singleImageUploadMiddleware } from '../storage/config.mjs';
 const userRouter = express.Router();
 import {
   deleteProfileImage,

@@ -5,7 +5,7 @@ import {
   errorPritify,
   UserLoginModel,
   UserSignupModel,
-} from './validation .mjs';
+} from './validation.mjs';
 import sendEmail from './email.mjs';
 import emailQueue from '../queue/email.queue.mjs';
 import { asyncJwtSign } from '../async.jwt.mjs';
