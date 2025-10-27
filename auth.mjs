@@ -4,6 +4,10 @@ import { ServerError } from './error.mjs';
 
 const authentication = async (req, res, next) => {
   // 1. check for token is available
+  // 2. validate token
+  // 3. extract payload of token
+  // 4. attach user details to request for further use
+
   if (!req.headers.authorization) {
     throw new ServerError(401, 'token not supplied');
   }
@@ -22,7 +26,6 @@ const authentication = async (req, res, next) => {
   } catch (err) {
     throw new ServerError(401, err.message);
   }
-
   next();
 };
 
