@@ -1,50 +1,67 @@
-import { ServerError } from '../error.mjs';
 import bcrypt from 'bcrypt';
-import { prisma, Prisma, DB_ERR_CODES } from '../prisma/db.mjs';
-import { errorPritify, UserSignupModel, UserLoginModel } from './validator.mjs';
+import { prisma, DB_ERR_CODES, Prisma } from '../prisma/db.mjs';
+import { ServerError } from '../error.mjs';
+import {
+  errorPritify,
+  UserLoginModel,
+  UserSignupModel,
+} from './validation .mjs';
+import sendEmail from './email.mjs';
 import emailQueue from '../queue/email.queue.mjs';
 import { asyncJwtSign } from '../async.jwt.mjs';
-import { generateSecureRandomString } from '../utils.mjs';
-import dayjs from 'dayjs';
-import { deleteImage, uploadImage } from '../storage/storage.mjs';
+import randomStrGen from '../tools/randomStrGen.mjs';
+import { deleteImage, uploadImage } from '../storege/storage.mjs';
+import { OAuth2Client } from 'google-auth-library';
+import { response } from 'express';
+
+const googleClient = new OAuth2Client(
+  process.env.CLIENT_ID,
+  process.env.CLIENT_SECRET,
+  process.env.REDIRECT_PATH
+);
 
 const signup = async (req, res, next) => {
-  // validate input data
   const result = await UserSignupModel.safeParseAsync(req.body);
   if (!result.success) {
     throw new ServerError(400, errorPritify(result));
   }
 
-  // hash password
   const hasedPassword = await bcrypt.hash(req.body.password, 10);
 
   // 2. generate a 32 keyword random string
-  const randomStr = generateSecureRandomString(32);
 
-  // 3. update this string in DB with future 15min expiry time
-  const futureExpiryTime = dayjs().add(15, 'minute');
+  const randomString = randomStrGen();
 
-  // add user to DB
+  // set token expiry time 15 minutes later
+
+  const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes later
+
   try {
     const newUser = await prisma.user.create({
       data: {
         email: req.body.email,
         name: req.body.name,
         password: hasedPassword,
-        resetToken: randomStr,
-        tokenExpiry: futureExpiryTime,
+        profilePhoto: req.body.profileImage,
+        accountVerified: false,
+        resetToken: randomString,
+        tokenExpiry: expiresAt,
       },
     });
+    console.log(newUser);
 
-    // 4. make link example https://localhost:5000/resetPassword/fgvjkdsuhvgyahfvajdsfahvdsjvbd
-    const link = `${req.protocol}://${process.env.FRONTEND_URL}/${randomStr}`;
+    // 4. make link example http://localhost:5000/resetPassword/fgvjkdsuhvgyahfvajdsfahvdsjvbd
 
-    await emailQueue.add('welcome_email', {
+    const resetLink = `http://localhost:5000/resetPassword/${randomString}`;
+
+    // 5. add this above link email replacing http://google.com
+
+    await emailQueue.add('send_verification_email', {
       to: newUser.email,
-      subject: 'Verfication Email',
+      subject: 'Verification Email',
       body: `<html>
-      <h1>Welcome ${newUser.name}</h1>
-      <a href=${link}>Click Here to verify account</a>
+    <h1>welcome to Game</h1>
+    <a href="${resetLink}"'>Click here</a>
     </html>`,
     });
   } catch (err) {
@@ -55,6 +72,9 @@ const signup = async (req, res, next) => {
     }
     throw err;
   }
+
+  // sendEmail(newUser.email, "Verification Email");
+  console.log(req.body);
 
   // IN FUTURE Implement something like this
   // const user = await catchDBError(await prisma.user.create({
@@ -76,11 +96,15 @@ const login = async (req, res, next) => {
     throw new ServerError(400, errorPritify(result));
   }
 
+  // find user by email from DB
+
   const user = await prisma.user.findUnique({
     where: {
       email: req.body.email,
     },
   });
+
+  console.log(user);
 
   if (!user) {
     throw new ServerError(404, 'user is not found');
@@ -95,13 +119,7 @@ const login = async (req, res, next) => {
   }
 
   const token = await asyncJwtSign(
-    {
-      id: user.id,
-      name: user.name,
-      email: user.email,
-      role: user.Role,
-      profilePhoto: user.profilePhoto,
-    },
+    { id: user.id, name: user.name, email: user.email, role: user.role },
     process.env.TOKEN_SECRET,
     { expiresIn: process.env.TOKEN_EXPIRY_TIME }
   );
@@ -109,28 +127,48 @@ const login = async (req, res, next) => {
   res.json({
     msg: 'login successful',
     token,
+    expiresIn: process.env.TOKEN_EXPIRY_TIME,
     id: user.id,
     name: user.name,
     email: user.email,
-    role: user.Role,
+    role: user.role,
     profilePhoto: user.profilePhoto,
   });
 };
 
 const forgotPassword = async (req, res, next) => {
-  // 2. generate a 32 keyword random string
-  const randomStr = generateSecureRandomString(32);
+  // 1. find User via email from req.body
+  // const user = await prisma.user.findUnique({
+  //   where: {
+  //     email: req.body.email,
+  //   },
+  // });
+
+  // if (!user) {
+  //   throw new ServerError(404, "user is not found");
+  // }
+
+  // if (!user.accountVerified) {
+  //   throw new ServerError(404, "verify you account first");
+  // }
+
+  // 1. generate a 32 keyword random string
+
+  const randomString = randomStrGen();
+
+  // set token expiry time 15 minutes later
+
+  const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes later
 
   // 3. update this string in DB with future 15min expiry time
-  const futureExpiryTime = dayjs().add(15, 'minute');
 
   const userArr = await prisma.user.updateManyAndReturn({
     where: {
       email: req.body.email,
     },
     data: {
-      resetToken: randomStr,
-      tokenExpiry: futureExpiryTime,
+      resetToken: randomString,
+      tokenExpiry: expiresAt,
     },
   });
 
@@ -140,8 +178,9 @@ const forgotPassword = async (req, res, next) => {
 
   const user = userArr[0];
 
-  // 4. make link example https://localhost:5000/resetPassword/fgvjkdsuhvgyahfvajdsfahvdsjvbd
-  const link = `${req.protocol}://${process.env.FRONTEND_URL}/${randomStr}`;
+  // 4. make link example http://localhost:5000/resetPassword/fgvjkdsuhvgyahfvajdsfahvdsjvbd
+
+  const link = `${req.protocol}://${process.env.FRONTEND_URL}/${randomString}`;
 
   await emailQueue.add('forgot_pass', {
     to: user.email,
@@ -156,28 +195,44 @@ const forgotPassword = async (req, res, next) => {
 
 const resetPassword = async (req, res, next) => {
   // 1. Extract token from req.body
+
   if (!req.body || !req.body.token) {
     throw new ServerError(401, 'Invalid link or token');
   }
+
+  console.log(req.body.token);
   // 2. find User via token from DB
+
+  // if (!req.body.token || !req.body.password) {
+  //   throw new ServerError(400, "token and password is required");
+  // }
+
   const user = await prisma.user.findFirst({
     where: {
       resetToken: req.body.token,
     },
   });
+
   if (!user) {
-    throw new ServerError(401, 'Invalid link or token');
+    throw new ServerError(404, 'Invalid link or token');
   }
+
   // 3. check for token expiry
-  if (dayjs(user.tokenExpiry).isBefore(dayjs())) {
-    throw new ServerError(401, 'Link expired');
+
+  if (new Date(user.tokenExpiry) < new Date()) {
+    throw new ServerError(404, 'Link expired');
   }
+  // 4. check if is accountVerified
+
   if (user.accountVerified && !req.body.password) {
     if (req.body.password.length < 6) {
       throw new ServerError(401, 'password should not be less than 6');
     }
     throw new ServerError(401, 'password must be supplied');
   }
+
+  // 5. if account verified extract password from req.body
+  // 6. hash password
 
   if (user.accountVerified) {
     const hashedPass = await bcrypt.hash(req.body.password, 10);
@@ -219,14 +274,13 @@ const updateProfileImage = async (req, res, next) => {
   let result;
   if (!user.profilePhoto) {
     // Delete image from cloudnary
-    const fileName = `${generateSecureRandomString(32)}`;
+    const fileName = `${randomStrGen(32)}`;
     // upload to cloud storage
     result = await uploadImage(req.file.buffer, fileName, 'profiles', true);
     // update file url in DB
   } else {
-    // split by "/"
     const splittedUrl = user.profilePhoto.split('/');
-    // pick last part of URL which is file name with extenstion
+
     const fileNameWithExt = splittedUrl[splittedUrl.length - 1];
     const fileName = fileNameWithExt.split('.')[0];
     result = await uploadImage(req.file.buffer, fileName, 'profiles', true);
@@ -277,9 +331,122 @@ const deleteProfileImage = async (req, res, next) => {
   res.json({ msg: `image deleted ${result.result}` });
 };
 
+// const googleLogin = async (req, res, next) => {
+//   console.log(req.body);
+//   try {
+//     const response = await googleClient.getToken(req.body.code);
+
+//     // ⿢ Use access token to fetch user profile
+//     const res = await fetch("https://www.googleapis.com/oauth2/v3/userinfo", {
+//       headers: { Authorization: `Bearer ${response.tokens.access_token}` },
+//     });
+//     const user = await res.json();
+//     console.log(user);
+
+//     const googleUser = await prisma.user.upsert({
+//       where: { email: user.email },
+//       update: {},
+//       create: {
+//         email: user.email,
+//         name: user.name,
+//         profilePhoto: user.picture,
+//         accountVerified: true,
+//       },
+//     });
+
+//     console.log(googleUser);
+//   } catch (error) {
+//     console.log(error);
+//   }
+
+//   const token = await asyncJwtSign(
+//     { id: user.id, name: user.name, email: user.email, role: user.role },
+//     process.env.TOKEN_SECRET,
+//     { expiresIn: process.env.TOKEN_EXPIRY_TIME }
+//   );
+
+//   return res.json({
+//     msg: "google login successful",
+//     token,
+//     expiresIn: process.env.TOKEN_EXPIRY_TIME,
+//     id: user.id,
+//     name: user.name,
+//     email: user.email,
+//     role: user.role,
+//     profilePhoto: user.profilePhoto,
+//   });
+// };
+
+const googleLogin = async (req, res, next) => {
+  console.log(req.body);
+
+  try {
+    // 1️⃣ Exchange authorization code for access token
+    const tokenResponse = await googleClient.getToken(req.body.code);
+    const accessToken = tokenResponse.tokens.access_token;
+
+    // 2️⃣ Fetch user info from Google
+    const googleRes = await fetch(
+      'https://www.googleapis.com/oauth2/v3/userinfo',
+      {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      }
+    );
+    const googleUser = await googleRes.json();
+
+    console.log('Google user:', googleUser);
+
+    // 3️⃣ Upsert user in database
+    const user = await prisma.user.upsert({
+      where: { email: googleUser.email },
+      update: {
+        name: googleUser.name,
+        profilePhoto: googleUser.picture,
+        accountVerified: true,
+      },
+      create: {
+        email: googleUser.email,
+        name: googleUser.name,
+        profilePhoto: googleUser.picture,
+        accountVerified: true,
+      },
+    });
+
+    console.log('DB user:', user);
+
+    // 4️⃣ Generate JWT
+    const token = await asyncJwtSign(
+      {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+      },
+      process.env.TOKEN_SECRET,
+      { expiresIn: process.env.TOKEN_EXPIRY_TIME }
+    );
+
+    // 5️⃣ Send response
+    return res.json({
+      msg: 'Google login successful',
+      token,
+      expiresIn: process.env.TOKEN_EXPIRY_TIME,
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      profilePhoto: user.profilePhoto,
+    });
+  } catch (error) {
+    console.error('Google login error:', error);
+    return res.status(500).json({ error: 'Google login failed' });
+  }
+};
+
 export {
   signup,
   login,
+  googleLogin,
   forgotPassword,
   resetPassword,
   getMe,
