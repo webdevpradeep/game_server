@@ -2,16 +2,17 @@ import express from 'express';
 import { authentication } from '../auth.mjs';
 import { singleImageUploadMiddleware } from '../storage/config.mjs';
 const userRouter = express.Router();
+
 import {
-  deleteProfileImage,
   forgotPassword,
+  deleteProfileImage,
   getMe,
   googleLogin,
   login,
   resetPassword,
   signup,
   updateProfileImage,
-} from './controller.mjs';
+} from './../users/controller.mjs';
 
 userRouter
   .post('/signup', signup)
