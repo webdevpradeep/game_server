@@ -1,19 +1,31 @@
 import express from 'express';
-import {
-  addGame,
-  getMyGameSession,
-  listGame,
-  requestGame,
-} from './controller.mjs';
 import { authentication } from '../auth.mjs';
-const gameRouter = express.Router();
+import { singleImageUploadMiddleware } from '../storege/config.mjs';
+const userRouter = express.Router();
+import {
+  deleteProfileImage,
+  forgotPassword,
+  getMe,
+  googleLogin,
+  login,
+  resetPassword,
+  signup,
+  updateProfileImage,
+} from './controller.mjs';
 
-gameRouter.use(authentication);
+userRouter
+  .post('/signup', signup)
+  .post('/login', login)
+  .post('/login/google', googleLogin)
+  .patch('/forgotPassword', forgotPassword)
+  .patch('/resetPassword', resetPassword)
+  .get('/profile', authentication, getMe)
+  .patch(
+    '/profile/image',
+    authentication,
+    singleImageUploadMiddleware('image'),
+    updateProfileImage
+  )
+  .delete('/profile/image/delete', authentication, deleteProfileImage);
 
-gameRouter
-  .post('/request', requestGame)
-  .post('/', addGame)
-  .get('/', listGame)
-  .get('/session/:sessionID', getMyGameSession);
-
-export default gameRouter;
+export default userRouter;
