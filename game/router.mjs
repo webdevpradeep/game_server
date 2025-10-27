@@ -1,20 +1,19 @@
 import express from 'express';
-const gameRouter = express.Router();
 import {
   addGame,
+  getMyGameSession,
   listGame,
   requestGame,
-  getMyGameSession,
 } from './controller.mjs';
-import { authentication, authorization } from '../auth.mjs';
-
-gameRouter.get('/', listGame);
+import { authentication } from '../auth.mjs';
+const gameRouter = express.Router();
 
 gameRouter.use(authentication);
 
 gameRouter
-  .post('/', authorization('ADMIN'), addGame)
   .post('/request', requestGame)
+  .post('/', addGame)
+  .get('/', listGame)
   .get('/session/:sessionID', getMyGameSession);
 
 export default gameRouter;
