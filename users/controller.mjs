@@ -10,7 +10,7 @@ import sendEmail from './email.mjs';
 import emailQueue from '../queue/email.queue.mjs';
 import { asyncJwtSign } from '../async.jwt.mjs';
 import randomStrGen from '../tools/randomStrGen.mjs';
-import { deleteProfileImage, uploadImage } from '../storage/storage.mjs';
+import { deleteImage, uploadImage } from '../storage/storage.mjs';
 import { OAuth2Client } from 'google-auth-library';
 import { response } from 'express';
 
